@@ -1,0 +1,40 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Local Android SDK configuration
+local.properties
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Android build outputs
+captures/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# APK / generated artifacts
+*.apk
+*.aab
+
+# Keystore / signing credentials
+*.jks
+*.keystore
+
+# Google services credentials
+google-services.json
+
+# Temporary / generated files
+*.log
+
+documentation/
+MEMORY.md
+.agents/
