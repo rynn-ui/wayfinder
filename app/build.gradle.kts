@@ -64,6 +64,8 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
 
+    implementation(libs.tensorflow.lite)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
