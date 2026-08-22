@@ -12,6 +12,11 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
+data class TimedDetectionResult(
+    val detections: List<RoadHazardDetection>,
+    val latencyMs: Float
+)
+
 fun interface TfliteRunner : AutoCloseable {
     fun run(input: ByteBuffer, output: Array<Array<FloatArray>>)
     override fun close() {}
@@ -43,6 +48,7 @@ class InterpreterTfliteRunner(
 
 class RoadHazardDetector(
     private val runner: TfliteRunner,
+    val modelType: AiModelType = AiModelType.INT8,
     val preprocessor: ImagePreprocessor = ImagePreprocessor(),
     val postProcessor: YoloPostProcessor = YoloPostProcessor()
 ) : AutoCloseable {
@@ -55,25 +61,42 @@ class RoadHazardDetector(
             assetPath: String = DEFAULT_MODEL_ASSET,
             options: Interpreter.Options = createDefaultOptions()
         ): RoadHazardDetector {
+            val modelType = if (assetPath.contains("float16") || assetPath.contains("fp16")) {
+                AiModelType.FP16
+            } else {
+                AiModelType.INT8
+            }
             val byteBuffer = loadModelFileFromAsset(context, assetPath)
             val interpreter = Interpreter(byteBuffer, options)
-            return RoadHazardDetector(InterpreterTfliteRunner(interpreter))
+            return RoadHazardDetector(InterpreterTfliteRunner(interpreter), modelType)
+        }
+
+        fun fromModelType(
+            context: Context,
+            modelType: AiModelType,
+            options: Interpreter.Options = createDefaultOptions()
+        ): RoadHazardDetector {
+            val byteBuffer = loadModelFileFromAsset(context, modelType.assetPath)
+            val interpreter = Interpreter(byteBuffer, options)
+            return RoadHazardDetector(InterpreterTfliteRunner(interpreter), modelType)
         }
 
         fun fromInterpreter(
             interpreter: Interpreter,
+            modelType: AiModelType = AiModelType.INT8,
             preprocessor: ImagePreprocessor = ImagePreprocessor(),
             postProcessor: YoloPostProcessor = YoloPostProcessor()
         ): RoadHazardDetector {
-            return RoadHazardDetector(InterpreterTfliteRunner(interpreter), preprocessor, postProcessor)
+            return RoadHazardDetector(InterpreterTfliteRunner(interpreter), modelType, preprocessor, postProcessor)
         }
 
         fun fromRunner(
             runner: TfliteRunner,
+            modelType: AiModelType = AiModelType.INT8,
             preprocessor: ImagePreprocessor = ImagePreprocessor(),
             postProcessor: YoloPostProcessor = YoloPostProcessor()
         ): RoadHazardDetector {
-            return RoadHazardDetector(runner, preprocessor, postProcessor)
+            return RoadHazardDetector(runner, modelType, preprocessor, postProcessor)
         }
 
         fun createDefaultOptions(): Interpreter.Options {
@@ -127,14 +150,28 @@ class RoadHazardDetector(
         imageProxy: ImageProxy,
         timestamp: Long = System.currentTimeMillis()
     ): List<RoadHazardDetection> {
-        if (isClosed) return emptyList()
+        return detectWithTiming(imageProxy, timestamp).detections
+    }
+
+    @Synchronized
+    fun detectWithTiming(
+        imageProxy: ImageProxy,
+        timestamp: Long = System.currentTimeMillis()
+    ): TimedDetectionResult {
+        if (isClosed) return TimedDetectionResult(emptyList(), 0f)
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
         val uprightWidth = if (rotationDegrees == 90 || rotationDegrees == 270) imageProxy.height else imageProxy.width
         val uprightHeight = if (rotationDegrees == 90 || rotationDegrees == 270) imageProxy.width else imageProxy.height
 
         preprocessor.preprocess(imageProxy, inputBuffer)
+
+        val startTime = System.nanoTime()
         runner.run(inputBuffer, outputBuffer)
-        return postProcessor.process(outputBuffer, uprightWidth, uprightHeight, timestamp)
+        val endTime = System.nanoTime()
+        val latencyMs = (endTime - startTime) / 1_000_000.0f
+
+        val detections = postProcessor.process(outputBuffer, uprightWidth, uprightHeight, timestamp)
+        return TimedDetectionResult(detections, latencyMs)
     }
 
     @Synchronized

@@ -12,6 +12,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import com.roadguardian.app.camera.FrameMetadata
 import com.roadguardian.app.domain.model.HazardType
 import com.roadguardian.app.domain.model.RoadHazardDetection
+import com.roadguardian.app.ui.theme.WayfinderHazardCrack
+import com.roadguardian.app.ui.theme.WayfinderHazardLongitudinal
+import com.roadguardian.app.ui.theme.WayfinderHazardPothole
+import com.roadguardian.app.ui.theme.WayfinderHazardTransverse
 
 @Composable
 fun HazardDetectionOverlay(
@@ -24,7 +28,7 @@ fun HazardDetectionOverlay(
     val textPaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.WHITE
-            textSize = 36.0f
+            textSize = 34.0f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             isAntiAlias = true
         }
@@ -86,11 +90,12 @@ fun HazardDetectionOverlay(
 
             val polygon = overlay.polygon
 
+            // Calm, muted leafy/nature color accents for detected hazards
             val boxColor = when (detection.hazardType) {
-                HazardType.POTHOLE -> Color(0xFFFF3B30)
-                HazardType.ALLIGATOR_CRACK -> Color(0xFFFF9500)
-                HazardType.LONGITUDINAL_CRACK -> Color(0xFFFFCC00)
-                HazardType.TRANSVERSE_CRACK -> Color(0xFF34C759)
+                HazardType.POTHOLE -> WayfinderHazardPothole
+                HazardType.ALLIGATOR_CRACK -> WayfinderHazardCrack
+                HazardType.LONGITUDINAL_CRACK -> WayfinderHazardLongitudinal
+                HazardType.TRANSVERSE_CRACK -> WayfinderHazardTransverse
             }
 
             // Draw detection polygon
@@ -101,11 +106,11 @@ fun HazardDetectionOverlay(
                 lineTo(polygon.bottomLeft.x, polygon.bottomLeft.y)
                 close()
             }
-            drawPath(path = path, color = boxColor, style = Stroke(width = 6.0f))
+            drawPath(path = path, color = boxColor, style = Stroke(width = 5.0f))
 
             // ── Draw rotated label badge with counter-rotated readable text ──
             textBgPaint.color = android.graphics.Color.argb(
-                (0.85f * 255).toInt(),
+                (0.78f * 255).toInt(),
                 (boxColor.red * 255).toInt(),
                 (boxColor.green * 255).toInt(),
                 (boxColor.blue * 255).toInt()

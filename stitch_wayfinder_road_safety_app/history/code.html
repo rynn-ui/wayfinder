@@ -1,0 +1,203 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Wayfinder - History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#424752",
+                        "surface": "#faf9fc",
+                        "primary-container": "#005eb8",
+                        "on-secondary": "#ffffff",
+                        "outline": "#727783",
+                        "primary": "#00478d",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f1f0f3",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eeedf0",
+                        "primary-fixed": "#d6e3ff",
+                        "on-surface": "#1a1c1e",
+                        "on-background": "#1a1c1e",
+                        "on-tertiary-container": "#ffcec8",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#930009",
+                        "on-secondary-fixed-variant": "#3c4858",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#a9c7ff",
+                        "on-primary-fixed-variant": "#00468c",
+                        "error": "#ba1a1a",
+                        "secondary": "#535f70",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#101c2b",
+                        "on-primary-fixed": "#001b3d",
+                        "surface-container-high": "#e8e8eb",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "on-secondary-container": "#596576",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-container-highest": "#e3e2e5",
+                        "on-primary-container": "#c8daff",
+                        "tertiary-fixed": "#ffdad5",
+                        "secondary-fixed": "#d7e3f8",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#bbc7db",
+                        "outline-variant": "#c2c6d4",
+                        "primary-fixed-dim": "#a9c7ff",
+                        "secondary-container": "#d7e3f8",
+                        "surface-container-low": "#f4f3f6",
+                        "inverse-surface": "#2f3033",
+                        "surface-dim": "#dadadc",
+                        "surface-bright": "#faf9fc",
+                        "background": "#faf9fc",
+                        "surface-variant": "#e3e2e5",
+                        "tertiary": "#94000a",
+                        "tertiary-container": "#bb1b1b",
+                        "surface-tint": "#005db6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "4px",
+                        "margin-mobile": "16px",
+                        "stack-lg": "16px",
+                        "section-spacing": "24px",
+                        "unit": "8px",
+                        "gutter": "8px",
+                        "margin-tablet": "24px",
+                        "stack-md": "8px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Roboto Flex"],
+                        "headline-lg": ["Roboto Flex"],
+                        "label-sm": ["Roboto Flex"],
+                        "display-lg": ["Roboto Flex"],
+                        "body-lg": ["Roboto Flex"],
+                        "title-lg": ["Roboto Flex"],
+                        "label-lg": ["Roboto Flex"],
+                        "headline-lg-mobile": ["Roboto Flex"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "400" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500" }],
+                        "display-lg": ["57px", { "lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400" }],
+                        "title-lg": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Roboto Flex', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background h-full flex flex-col">
+<!-- TopAppBar Component -->
+<header class="bg-surface dark:bg-surface flex items-center justify-between px-margin-mobile h-16 w-full fixed top-0 z-50">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant dark:text-on-surface-variant active:scale-95 transition-transform hover:bg-surface-container-high dark:hover:bg-surface-container-highest rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-title-lg text-title-lg font-bold text-primary dark:text-primary-fixed-dim">Wayfinder</h1>
+</div>
+<div class="flex items-center gap-2">
+<!-- Optional Actions -->
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 mt-16 mb-20 overflow-y-auto w-full max-w-3xl mx-auto px-margin-mobile pt-stack-lg">
+<div class="mb-section-spacing">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-stack-md">Hazard History</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Review recently detected hazards along your routes.</p>
+</div>
+<!-- History List -->
+<ul class="flex flex-col border-t border-outline-variant dark:border-outline-variant">
+<!-- List Item 1 -->
+<li class="flex items-center gap-stack-lg py-stack-lg border-b border-outline-variant dark:border-outline-variant hover:bg-surface-container-lowest transition-colors cursor-pointer">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-tertiary-fixed text-on-tertiary-fixed rounded-full"><span class="material-symbols-outlined" data-icon="warning" data-weight="fill" style="font-variation-settings: 'FILL' 1;">warning</span></div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Construction Zone</p>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">I-95 North, Exit 42</p>
+</div>
+<div class="flex-shrink-0 flex flex-col items-end text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Today</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">08:15 AM</span>
+</div>
+</li>
+<!-- List Item 2 -->
+<li class="flex items-center gap-stack-lg py-stack-lg border-b border-outline-variant dark:border-outline-variant hover:bg-surface-container-lowest transition-colors cursor-pointer">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-error-container text-on-error-container rounded-full"><span class="material-symbols-outlined" data-icon="car_crash" data-weight="fill" style="font-variation-settings: 'FILL' 1;">car_crash</span></div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Vehicle Accident</p>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Route 7 &amp; Main St</p>
+</div>
+<div class="flex-shrink-0 flex flex-col items-end text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Yesterday</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">17:30 PM</span>
+</div>
+</li>
+<!-- List Item 3 -->
+<li class="flex items-center gap-stack-lg py-stack-lg border-b border-outline-variant dark:border-outline-variant hover:bg-surface-container-lowest transition-colors cursor-pointer">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-error-container text-on-error-container rounded-full"><span class="material-symbols-outlined" data-icon="pothole" data-weight="fill" style="font-variation-settings: 'FILL' 1;">maps_ar</span></div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Severe Pothole</p>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Elm Street, Block 400</p>
+</div>
+<div class="flex-shrink-0 flex flex-col items-end text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Oct 24</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">09:10 AM</span>
+</div>
+</li>
+<!-- List Item 4 -->
+<li class="flex items-center gap-stack-lg py-stack-lg border-b border-outline-variant dark:border-outline-variant hover:bg-surface-container-lowest transition-colors cursor-pointer">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-secondary-container text-on-secondary-container rounded-full"><span class="material-symbols-outlined" data-icon="cloudy_snowing" data-weight="fill" style="font-variation-settings: 'FILL' 1;">cloudy_snowing</span></div>
+<div class="flex-1 min-w-0">
+<p class="font-body-lg text-body-lg text-on-surface truncate">Icy Conditions</p>
+<p class="font-body-md text-body-md text-on-surface-variant truncate">Mountain Pass Rd</p>
+</div>
+<div class="flex-shrink-0 flex flex-col items-end text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Oct 22</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">06:00 AM</span>
+</div>
+</li>
+</ul>
+<div class="flex justify-center mt-section-spacing">
+<button class="border border-outline text-primary font-label-lg text-label-lg px-6 py-2 rounded-full hover:bg-surface-container-low transition-colors">
+                Load More History
+            </button>
+</div>
+</main>
+<!-- BottomNavBar Component -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-surface-container dark:bg-surface-container md:hidden">
+<!-- Tab: Map (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-all duration-100 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="map">map</span>
+<span class="font-label-sm text-label-sm mt-1">Map</span>
+</a>
+<!-- Tab: Home (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-all duration-100 group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors" data-icon="shield">shield</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<!-- Tab: History (Active) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-full px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-90 transition-all duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="history" data-weight="fill" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-sm text-label-sm mt-1">History</span>
+</a>
+</nav>
+
+
+</body></html>

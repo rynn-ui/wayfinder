@@ -1,44 +1,57 @@
 package com.roadguardian.app.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+private val LeafyGreenColorScheme = darkColorScheme(
+    primary = WayfinderPrimaryGreen,
+    onPrimary = WayfinderOnPrimary,
+    primaryContainer = WayfinderDeepNaturalGreen,
+    onPrimaryContainer = WayfinderLightGreenery,
+    inversePrimary = WayfinderSage,
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    secondary = WayfinderSage,
+    onSecondary = WayfinderOnSecondary,
+    secondaryContainer = WayfinderSecondaryContainer,
+    onSecondaryContainer = WayfinderLightGreenery,
+
+    tertiary = WayfinderMutedForest,
+    onTertiary = WayfinderOnTertiary,
+    tertiaryContainer = WayfinderTertiaryContainer,
+    onTertiaryContainer = WayfinderSage,
+
+    error = WayfinderHazardPothole,
+    onError = WayfinderOnError,
+    errorContainer = WayfinderErrorContainer,
+    onErrorContainer = WayfinderOnErrorContainer,
+
+    background = WayfinderDarkBackground,
+    onBackground = WayfinderTextPrimary,
+
+    surface = WayfinderDarkSurface,
+    onSurface = WayfinderTextPrimary,
+    surfaceVariant = WayfinderDarkSurfaceVariant,
+    onSurfaceVariant = WayfinderTextSecondary,
+    surfaceContainer = WayfinderDarkSurfaceContainer,
+    surfaceContainerHigh = WayfinderDarkSurfaceContainerHigh,
+    surfaceContainerHighest = WayfinderDarkSurfaceContainerHighest,
+    surfaceContainerLow = WayfinderDarkSurfaceContainerLow,
+    surfaceContainerLowest = WayfinderDarkSurfaceContainerLowest,
+    surfaceDim = WayfinderDarkSurfaceContainerLowest,
+    surfaceBright = WayfinderDarkSurfaceVariant,
+
+    outline = WayfinderOutline,
+    outlineVariant = WayfinderOutlineVariant
 )
 
 @Composable
 fun AIRoadGuardianTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = LeafyGreenColorScheme,
         typography = Typography,
         content = content
     )

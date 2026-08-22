@@ -1,24 +1,25 @@
 package com.roadguardian.app.ai.inference
 
 import com.roadguardian.app.domain.model.HazardType
+import com.roadguardian.app.domain.model.RoadHazardDetection
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.io.FileInputStream
-import java.nio.ByteBuffer
 
 class RoadHazardDetectorTest {
 
     @Test
-    fun modelAsset_existsInMainAssets_andHasValidFlatBufferHeader() {
+    fun int8ModelAsset_existsInMainAssets_andHasValidFlatBufferHeader() {
         val modelFile = resolveFile(
-            "src/main/assets/yolo12n_seed0_best_dynamic_range_quant.tflite",
-            "app/src/main/assets/yolo12n_seed0_best_dynamic_range_quant.tflite"
+            "src/main/assets/${AiModelType.INT8.assetPath}",
+            "app/src/main/assets/${AiModelType.INT8.assetPath}"
         )
-        assertTrue(modelFile.exists())
-        assertTrue(modelFile.length() > 2_000_000L)
+        assertTrue("INT8 model file must exist", modelFile.exists())
+        assertTrue("INT8 model file size should be > 2MB", modelFile.length() > 2_000_000L)
 
         val header = ByteArray(8)
         FileInputStream(modelFile).use { stream ->
@@ -27,6 +28,79 @@ class RoadHazardDetectorTest {
 
         val identifier = String(header, 4, 4, Charsets.US_ASCII)
         assertEquals("TFL3", identifier)
+    }
+
+    @Test
+    fun fp16ModelAsset_existsInMainAssets_andHasValidFlatBufferHeader() {
+        val modelFile = resolveFile(
+            "src/main/assets/${AiModelType.FP16.assetPath}",
+            "app/src/main/assets/${AiModelType.FP16.assetPath}"
+        )
+        assertTrue("FP16 model file must exist", modelFile.exists())
+        assertTrue("FP16 model file size should be > 4MB", modelFile.length() > 4_000_000L)
+
+        val header = ByteArray(8)
+        FileInputStream(modelFile).use { stream ->
+            stream.read(header)
+        }
+
+        val identifier = String(header, 4, 4, Charsets.US_ASCII)
+        assertEquals("TFL3", identifier)
+    }
+
+    @Test
+    fun aiModelType_enumEntries_haveConsistentNamesAndDescriptions() {
+        assertEquals("INT8", AiModelType.INT8.displayName)
+        assertEquals("FP16", AiModelType.FP16.displayName)
+        assertTrue(AiModelType.INT8.precisionLabel.contains("2.83"))
+        assertTrue(AiModelType.FP16.precisionLabel.contains("5.08"))
+    }
+
+    @Test
+    fun aiBenchmarkTracker_warmupAndFpsCalculation_worksCorrectly() {
+        val tracker = AiBenchmarkTracker(initialModel = AiModelType.INT8, warmupTargetFrames = 3, rollingWindowSize = 5)
+
+        // Warmup frame 1
+        var snap = tracker.recordInference(50f, emptyList())
+        assertTrue(snap.isWarmingUp)
+        assertEquals(2, snap.warmupRemaining)
+        assertEquals(0L, snap.framesProcessed)
+
+        // Warmup frame 2 & 3
+        tracker.recordInference(50f, emptyList())
+        snap = tracker.recordInference(50f, emptyList())
+        assertFalse(snap.isWarmingUp)
+        assertEquals(0, snap.warmupRemaining)
+        assertEquals(0L, snap.framesProcessed)
+
+        // Post-warmup frame 1 with detection
+        val mockDetection = RoadHazardDetection(
+            id = "d1",
+            hazardType = HazardType.POTHOLE,
+            confidence = 0.60f,
+            boundingBox = null,
+            timestamp = 1000L
+        )
+        snap = tracker.recordInference(40f, listOf(mockDetection))
+        assertEquals(1L, snap.framesProcessed)
+        assertEquals(1L, snap.framesWithDetection)
+        assertEquals(1L, snap.totalDetections)
+        assertEquals(0.60f, snap.currentAvgConfidence, 0.001f)
+        assertEquals(0.60f, snap.currentMaxConfidence, 0.001f)
+        assertEquals(40f, snap.rollingAvgLatencyMs, 0.001f)
+        assertEquals(25.0f, snap.inferenceFps, 0.001f)
+
+        // Switch model
+        tracker.startModelSwitch(AiModelType.FP16)
+        snap = tracker.getSnapshot()
+        assertTrue(snap.isLoading)
+        assertEquals(AiModelType.FP16, snap.activeModel)
+        assertEquals(0L, snap.framesProcessed)
+
+        tracker.completeModelSwitch()
+        snap = tracker.getSnapshot()
+        assertFalse(snap.isLoading)
+        assertTrue(snap.isWarmingUp)
     }
 
     @Test
@@ -40,7 +114,7 @@ class RoadHazardDetectorTest {
             output[0][7][0] = 0.35f
         }
 
-        val detector = RoadHazardDetector.fromRunner(simulatedRunner)
+        val detector = RoadHazardDetector.fromRunner(simulatedRunner, AiModelType.INT8)
         val pixels = IntArray(1024 * 1024) { 0x555555 }
 
         val detections = detector.detect(pixels, 1024, 1024)
@@ -70,7 +144,7 @@ class RoadHazardDetectorTest {
             output[0][6][0] = 0.82f
         }
 
-        val detector = RoadHazardDetector.fromRunner(simulatedRunner)
+        val detector = RoadHazardDetector.fromRunner(simulatedRunner, AiModelType.FP16)
         val pixels = IntArray(1024 * 1024) { 0x333333 }
 
         val detections = detector.detect(pixels, 1024, 1024)

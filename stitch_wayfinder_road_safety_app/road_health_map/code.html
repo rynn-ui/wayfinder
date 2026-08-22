@@ -1,0 +1,267 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Wayfinder - Road Health Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#424752",
+                        "surface": "#faf9fc",
+                        "primary-container": "#005eb8",
+                        "on-secondary": "#ffffff",
+                        "outline": "#727783",
+                        "primary": "#00478d",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#f1f0f3",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eeedf0",
+                        "primary-fixed": "#d6e3ff",
+                        "on-surface": "#1a1c1e",
+                        "on-background": "#1a1c1e",
+                        "on-tertiary-container": "#ffcec8",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#930009",
+                        "on-secondary-fixed-variant": "#3c4858",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#a9c7ff",
+                        "on-primary-fixed-variant": "#00468c",
+                        "error": "#ba1a1a",
+                        "secondary": "#535f70",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#101c2b",
+                        "on-primary-fixed": "#001b3d",
+                        "surface-container-high": "#e8e8eb",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "on-secondary-container": "#596576",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-container-highest": "#e3e2e5",
+                        "on-primary-container": "#c8daff",
+                        "tertiary-fixed": "#ffdad5",
+                        "secondary-fixed": "#d7e3f8",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#bbc7db",
+                        "outline-variant": "#c2c6d4",
+                        "primary-fixed-dim": "#a9c7ff",
+                        "secondary-container": "#d7e3f8",
+                        "surface-container-low": "#f4f3f6",
+                        "inverse-surface": "#2f3033",
+                        "surface-dim": "#dadadc",
+                        "surface-bright": "#faf9fc",
+                        "background": "#faf9fc",
+                        "surface-variant": "#e3e2e5",
+                        "tertiary": "#94000a",
+                        "tertiary-container": "#bb1b1b",
+                        "surface-tint": "#005db6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "4px",
+                        "margin-mobile": "16px",
+                        "stack-lg": "16px",
+                        "section-spacing": "24px",
+                        "unit": "8px",
+                        "gutter": "8px",
+                        "margin-tablet": "24px",
+                        "stack-md": "8px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Roboto Flex"],
+                        "headline-lg": ["Roboto Flex"],
+                        "label-sm": ["Roboto Flex"],
+                        "display-lg": ["Roboto Flex"],
+                        "body-lg": ["Roboto Flex"],
+                        "title-lg": ["Roboto Flex"],
+                        "label-lg": ["Roboto Flex"],
+                        "headline-lg-mobile": ["Roboto Flex"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.25px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "400" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500" }],
+                        "display-lg": ["57px", { "lineHeight": "64px", "letterSpacing": "-0.25px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0.5px", "fontWeight": "400" }],
+                        "title-lg": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .map-bg {
+            background-color: #e3e2e5;
+            background-image: radial-gradient(#c2c6d4 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .bottom-sheet {
+            transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+        }
+        .bottom-sheet.closed {
+            transform: translateY(100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface flex items-center justify-between px-margin-mobile h-16 w-full fixed top-0 z-10 bg-surface-container dark:bg-surface-container">
+<div class="flex items-center gap-4">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-title-lg text-title-lg font-bold text-primary dark:text-primary-fixed-dim">Wayfinder</h1>
+</div>
+<div class="flex items-center gap-2">
+<div class="bg-surface-container-high rounded-full px-3 py-1 flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-error block"></span>
+<span class="font-label-sm text-label-sm text-on-surface">3 Hazards</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (Map Area) -->
+<main class="flex-1 relative w-full h-full mt-16 mb-20 md:mb-0 bg-surface-variant overflow-hidden">
+<!-- Placeholder for Map Graphic -->
+<div class="absolute inset-0 w-full h-full" data-alt="A highly detailed top-down view of a modern city map in a light-mode color palette. The map features soft gray roads, pristine white buildings, and subtle blue highlights for water features. The aesthetic is clean, technical, and professional, perfectly suited for a corporate navigation application. The overall mood is calm and structured, providing clear visual hierarchy without overwhelming detail." data-location="San Francisco" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDpr5KIhDiK39dOdTKwuvqzEGzZUpRmMPg2OOdCp8OsrcCVwaKbLNslc4mDkEtqDClZU8yEClCxVfTiOvpUQL9LN0d55i5HT7emKC1DZDAmvElnXdN4WMzDmNRy1ob1KyDS8m4xob-iEAVSCKXOMSh96SJdV7k6LnfE8PDcUMX0HtObYnD-O26jKOjyFQM75mYioQ0Bi-01VXvwOhqQgCP_Xe6qrLcg5Aape2GHLKyR9f2QXCisl5e76g')"></div>
+<!-- Hazard Markers -->
+<!-- Marker 1: Pothole -->
+<button class="absolute top-1/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group" id="marker-1" onclick="openBottomSheet('Pothole', '123 Main St', '2h ago', 'warning')">
+<div class="bg-error-container text-on-error-container p-2 rounded-full shadow-sm border border-error/20 group-hover:scale-110 transition-transform"><div class="bg-error text-on-error p-2 rounded-full shadow-sm border border-error/50 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[20px]" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div></div>
+</button>
+<!-- Marker 2: Construction -->
+<button class="absolute top-1/2 left-2/3 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group" id="marker-2" onclick="openBottomSheet('Construction', '456 Oak Ave', '1h ago', 'construction')">
+<div class="bg-tertiary-container text-on-tertiary-container p-2 rounded-full shadow-sm border border-tertiary/20 group-hover:scale-110 transition-transform"><div class="bg-secondary-container text-on-secondary-container p-2 rounded-full shadow-sm border border-outline-variant group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[20px]" data-icon="construction" style="font-variation-settings: 'FILL' 1;">construction</span>
+</div></div>
+</button>
+<!-- Marker 3: Accident -->
+<button class="absolute bottom-1/4 left-1/3 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group" id="marker-3" onclick="openBottomSheet('Accident', '789 Pine Ln', '15m ago', 'car_crash')">
+<div class="bg-error text-on-error p-2 rounded-full shadow-sm border border-error/50 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[20px]" data-icon="car_crash" style="font-variation-settings: 'FILL' 1;">car_crash</span>
+</div>
+</button>
+<!-- User Location Marker -->
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+<div class="absolute w-12 h-12 bg-primary/20 rounded-full animate-ping"></div>
+<div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-sm z-10"></div>
+</div>
+<!-- Controls Overlay -->
+<div class="absolute right-4 bottom-24 md:bottom-8 flex flex-col gap-2">
+<button class="w-12 h-12 bg-surface-container-lowest text-on-surface rounded-full shadow-sm flex items-center justify-center hover:bg-surface-container-low active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<button class="w-12 h-12 bg-surface-container-lowest text-on-surface rounded-full shadow-sm flex items-center justify-center hover:bg-surface-container-low active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+<button class="w-12 h-12 bg-primary text-on-primary rounded-full shadow-sm flex items-center justify-center hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all mt-4">
+<span class="material-symbols-outlined" data-icon="my_location" style="font-variation-settings: 'FILL' 1;">my_location</span>
+</button>
+</div>
+<!-- Bottom Sheet / Overlay -->
+<div class="bottom-sheet closed absolute bottom-0 left-0 w-full bg-surface-container-lowest rounded-t-xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 pb-20 md:pb-4 md:w-96 md:left-4 md:bottom-4 md:rounded-xl md:shadow-lg" id="bottom-sheet">
+<div class="w-full flex justify-center py-2 md:hidden" onclick="closeBottomSheet()">
+<div class="w-8 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<div class="px-margin-mobile pb-4 pt-2">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-3">
+<div class="bg-error-container p-3 rounded-full flex items-center justify-center" id="sheet-icon-bg">
+<span class="material-symbols-outlined text-on-error-container" data-icon="warning" id="sheet-icon" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div>
+<h2 class="font-title-lg text-title-lg text-on-surface" id="sheet-title">Hazard: Pothole</h2>
+<p class="font-body-md text-body-md text-on-surface-variant" id="sheet-time">Reported 2h ago</p>
+</div>
+</div>
+<button class="text-on-surface-variant hover:bg-surface-container p-2 rounded-full" onclick="closeBottomSheet()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-2 mb-6">
+<div class="flex items-center gap-2 text-on-surface">
+<span class="material-symbols-outlined text-outline text-[20px]" data-icon="location_on">location_on</span>
+<span class="font-body-md text-body-md" id="sheet-location">123 Main St</span>
+</div>
+</div>
+<div class="flex gap-2 w-full">
+<button class="flex-1 bg-surface-container-high text-on-surface font-label-lg text-label-lg py-3 px-4 rounded-full hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="thumb_up">thumb_up</span> Confirm
+                    </button>
+<button class="flex-1 bg-primary text-on-primary font-label-lg text-label-lg py-3 px-4 rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="alt_route">alt_route</span> Reroute
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-surface-container dark:bg-surface-container fixed bottom-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-surface-container dark:bg-surface-container">
+<!-- Map (Active) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container rounded-full px-5 py-1 active:scale-90 transition-all duration-100 hover:bg-surface-variant dark:hover:bg-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="map" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-label-sm text-label-sm mt-1">Map</span>
+</a>
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-all duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="shield">shield</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<!-- History -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-5 py-1 hover:bg-surface-variant dark:hover:bg-surface-variant rounded-full active:scale-90 transition-all duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-sm text-label-sm mt-1">History</span>
+</a>
+</nav>
+<script>
+        function openBottomSheet(type, location, time, icon) {
+            const sheet = document.getElementById('bottom-sheet');
+            
+            // Update content
+            document.getElementById('sheet-title').textContent = `Hazard: ${type}`;
+            document.getElementById('sheet-location').textContent = location;
+            document.getElementById('sheet-time').textContent = `Reported ${time}`;
+            
+            const iconEl = document.getElementById('sheet-icon');
+            iconEl.textContent = icon;
+            iconEl.setAttribute('data-icon', icon);
+            
+            const bgEl = document.getElementById('sheet-icon-bg');
+            // Reset classes
+            bgEl.className = 'p-3 rounded-full flex items-center justify-center';
+            iconEl.className = 'material-symbols-outlined';
+            
+            if(type === 'Accident') {
+                bgEl.classList.add('bg-error');
+                iconEl.classList.add('text-on-error');
+            } else if (type === 'Construction') {
+                bgEl.classList.add('bg-tertiary-container');
+                iconEl.classList.add('text-on-tertiary-container');
+            } else {
+                bgEl.classList.add('bg-error-container');
+                iconEl.classList.add('text-on-error-container');
+            }
+            
+            // Show sheet
+            sheet.classList.remove('closed');
+        }
+
+        function closeBottomSheet() {
+            document.getElementById('bottom-sheet').classList.add('closed');
+        }
+    </script>
+
+
+</body></html>

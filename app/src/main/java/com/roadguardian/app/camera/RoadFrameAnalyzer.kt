@@ -7,6 +7,7 @@ import com.roadguardian.app.ai.inference.RoadHazardDetector
 import com.roadguardian.app.domain.model.RoadHazardDetection
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
 data class FrameMetadata(
     val width: Int,
@@ -44,11 +45,27 @@ data class FrameMetadata(
 }
 
 class RoadFrameAnalyzer(
-    private val detector: RoadHazardDetector? = null,
+    detector: RoadHazardDetector? = null,
     private val onInferenceResult: (List<RoadHazardDetection>, FrameMetadata) -> Unit = { _, _ -> },
+    private val onInferenceResultWithTiming: (List<RoadHazardDetection>, FrameMetadata, Float) -> Unit = { _, _, _ -> },
     private val onError: (Throwable) -> Unit = {},
     private val onFrameAnalyzed: (FrameMetadata) -> Unit = {}
 ) : ImageAnalysis.Analyzer {
+
+    constructor(
+        detector: RoadHazardDetector?,
+        onInferenceResult: (List<RoadHazardDetection>, FrameMetadata) -> Unit,
+        onError: (Throwable) -> Unit,
+        onFrameAnalyzed: (FrameMetadata) -> Unit
+    ) : this(
+        detector = detector,
+        onInferenceResult = onInferenceResult,
+        onInferenceResultWithTiming = { _, _, _ -> },
+        onError = onError,
+        onFrameAnalyzed = onFrameAnalyzed
+    )
+
+    private val detectorRef = AtomicReference<RoadHazardDetector?>(detector)
 
     @Volatile
     var displayRotationDegrees: Int = 0
@@ -65,6 +82,10 @@ class RoadFrameAnalyzer(
 
     private val isProcessing = AtomicBoolean(false)
     private val frameCounter = AtomicLong(0L)
+
+    fun updateDetector(newDetector: RoadHazardDetector?) {
+        detectorRef.set(newDetector)
+    }
 
     override fun analyze(imageProxy: ImageProxy) {
         try {
@@ -97,10 +118,12 @@ class RoadFrameAnalyzer(
 
             onFrameAnalyzed(metadata)
 
-            if (detector != null && isProcessing.compareAndSet(false, true)) {
+            val currentDetector = detectorRef.get()
+            if (currentDetector != null && isProcessing.compareAndSet(false, true)) {
                 try {
-                    val detections = detector.detect(imageProxy, metadata.timestamp)
-                    onInferenceResult(detections, metadata)
+                    val result = currentDetector.detectWithTiming(imageProxy, metadata.timestamp)
+                    onInferenceResult(result.detections, metadata)
+                    onInferenceResultWithTiming(result.detections, metadata, result.latencyMs)
                 } catch (t: Throwable) {
                     onError(t)
                 } finally {
