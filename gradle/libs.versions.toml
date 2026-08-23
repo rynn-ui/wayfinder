@@ -8,6 +8,9 @@ androidxCamera = "1.4.1"
 junit = "4.13.2"
 kotlin = "2.3.20"
 tensorflowLite = "2.16.1"
+playServicesLocation = "21.3.0"
+playServicesMaps = "19.1.0"
+mapsCompose = "6.4.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -25,6 +28,9 @@ androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", versi
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "androidxCamera" }
 junit = { module = "junit:junit", version.ref = "junit" }
 tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tensorflowLite" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

@@ -49,9 +49,12 @@ import com.roadguardian.app.ai.inference.AiModelType
 import com.roadguardian.app.ai.inference.RoadHazardDetector
 import com.roadguardian.app.camera.FrameMetadata
 import com.roadguardian.app.camera.RoadFrameAnalyzer
+import com.roadguardian.app.data.repository.RoadHazardRepository
 import com.roadguardian.app.domain.model.HazardType
 import com.roadguardian.app.domain.model.RoadHazardDetection
 import com.roadguardian.app.location.LocationProvider
+import com.roadguardian.app.location.WayfinderLocationManager
+import com.roadguardian.app.sensors.WayfinderSensorManager
 import com.roadguardian.app.ui.components.GlassButton
 import com.roadguardian.app.ui.components.GlassCard
 import com.roadguardian.app.ui.components.NatureBackground
@@ -110,14 +113,29 @@ fun MainAppScreen() {
         }
     }
 
-    // Weather & Location Infrastructure
     val weatherRepository = remember { WeatherRepository(context) }
     val weatherState by weatherRepository.weatherState.collectAsState()
     val scope = rememberCoroutineScope()
 
+    val locationManager = remember { WayfinderLocationManager(context) }
+    val locationState by locationManager.locationState.collectAsState()
+    var hasLocationPermission by remember { mutableStateOf(locationManager.hasPermission()) }
+
+    val hazardRepository = remember { RoadHazardRepository() }
+    val hazardsList by hazardRepository.hazardsState.collectAsState()
+
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
+        val granted = locationManager.hasPermission()
+        hasLocationPermission = granted
+        if (granted) {
+            if (currentScreen == WayfinderScreen.LIVE_MONITORING) {
+                locationManager.startHighFrequencyUpdates()
+            } else if (currentScreen == WayfinderScreen.MAP) {
+                locationManager.startLowFrequencyUpdates()
+            }
+        }
         scope.launch {
             weatherRepository.refreshWeather(force = true)
         }
@@ -132,18 +150,35 @@ fun MainAppScreen() {
                 )
             )
         } else {
+            hasLocationPermission = true
             weatherRepository.refreshWeather(force = true)
         }
     }
 
-    // Periodically and on screen activation refresh weather
     LaunchedEffect(currentScreen) {
         if (currentScreen == WayfinderScreen.HOME) {
             weatherRepository.refreshWeather()
         }
     }
 
-    // Derive displayed city and region
+    LaunchedEffect(currentScreen, hasLocationPermission) {
+        if (hasLocationPermission) {
+            when (currentScreen) {
+                WayfinderScreen.LIVE_MONITORING -> {
+                    locationManager.startHighFrequencyUpdates()
+                }
+                WayfinderScreen.MAP -> {
+                    locationManager.startLowFrequencyUpdates()
+                }
+                else -> {
+                    locationManager.stopUpdates()
+                }
+            }
+        } else {
+            locationManager.stopUpdates()
+        }
+    }
+
     val (cityName, regionName) = when (val state = weatherState) {
         is WeatherState.Success -> Pair(state.cityName, state.regionName)
         is WeatherState.Error -> Pair(state.cityName ?: "Current Area", state.regionName ?: "")
@@ -151,10 +186,12 @@ fun MainAppScreen() {
         is WeatherState.Loading -> Pair("Locating...", "")
     }
 
-    // AI Model A/B Testing & Benchmark Infrastructure
     var activeModelType by remember { mutableStateOf(AiModelType.DEFAULT) }
     val benchmarkTracker = remember { AiBenchmarkTracker(initialModel = AiModelType.DEFAULT) }
     var benchmarkSnapshot by remember { mutableStateOf(benchmarkTracker.getSnapshot()) }
+
+    val sensorManager = remember { WayfinderSensorManager(context) }
+    val sensorTelemetry by sensorManager.telemetry.collectAsState()
 
     var detector by remember {
         mutableStateOf<RoadHazardDetector?>(null)
@@ -167,9 +204,19 @@ fun MainAppScreen() {
         }
     }
 
+    LaunchedEffect(currentScreen) {
+        if (currentScreen == WayfinderScreen.LIVE_MONITORING) {
+            sensorManager.startListening()
+        } else {
+            sensorManager.stopListening()
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             detector?.close()
+            sensorManager.stopListening()
+            locationManager.stopUpdates()
         }
     }
 
@@ -192,6 +239,15 @@ fun MainAppScreen() {
                     latestHazardType = best.hazardType
                     latestConfidence = best.confidence
                     totalDetectionsCount += detections.size
+
+                    if (locationState.isAvailable && locationState.latitude != 0.0) {
+                        hazardRepository.recordDetection(
+                            hazardType = best.hazardType,
+                            confidence = best.confidence,
+                            latitude = locationState.latitude,
+                            longitude = locationState.longitude
+                        )
+                    }
                 }
             },
             onInferenceResultWithTiming = { detections, metadata, latencyMs ->
@@ -206,12 +262,10 @@ fun MainAppScreen() {
         )
     }
 
-    // Keep analyzer's detector in sync when detector state changes
     LaunchedEffect(detector) {
         analyzer.updateDetector(detector)
     }
 
-    // Safe mutual-exclusive model switching
     fun switchModel(newModel: AiModelType) {
         if (activeModelType == newModel) return
         activeModelType = newModel
@@ -220,20 +274,16 @@ fun MainAppScreen() {
         currentDetections = emptyList()
 
         scope.launch(Dispatchers.IO) {
-            // 1. Temporarily detach detector from analyzer to prevent in-flight race conditions
             analyzer.updateDetector(null)
 
-            // 2. Safely close old detector
             val oldDetector = detector
             detector = null
             oldDetector?.close()
 
-            // 3. Load newly selected model
             val newDetector = runCatching {
                 RoadHazardDetector.fromModelType(context, newModel)
             }.getOrNull()
 
-            // 4. Attach new detector and complete switch
             detector = newDetector
             analyzer.updateDetector(newDetector)
             benchmarkTracker.completeModelSwitch()
@@ -248,7 +298,6 @@ fun MainAppScreen() {
         }
     }
 
-    // Live Monitoring Mode (full screen with camera and detection HUD)
     if (currentScreen == WayfinderScreen.LIVE_MONITORING) {
         if (hasCameraPermission) {
             LiveMonitoringScreen(
@@ -256,13 +305,15 @@ fun MainAppScreen() {
                 detections = currentDetections,
                 frameMetadata = lastMetadata,
                 totalDetectionsCount = totalDetectionsCount,
+                speedValue = locationState.speedDisplayValue,
+                speedUnit = locationState.speedDisplayUnit,
                 benchmarkSnapshot = benchmarkSnapshot,
+                sensorTelemetry = sensorTelemetry,
                 onStopMonitoring = {
                     navigateTo(WayfinderScreen.HOME)
                 }
             )
         } else {
-            // Calm Leafy Glass Permission Screen
             NatureBackground {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -327,14 +378,13 @@ fun MainAppScreen() {
             }
         }
     } else {
-        // Standard Navigation Scaffolding (Home, Map, History, Settings)
         Scaffold(
             containerColor = WayfinderDarkBackground,
             topBar = {
                 WayfinderTopAppBar(
                     title = "Wayfinder",
                     showBackButton = currentScreen == WayfinderScreen.SETTINGS,
-                    hazardCount = if (currentScreen == WayfinderScreen.MAP) 0 else null,
+                    hazardCount = if (currentScreen == WayfinderScreen.MAP) hazardsList.size else null,
                     onMenuClick = { navigateTo(WayfinderScreen.SETTINGS) },
                     onBackClick = { navigateTo(previousScreen) }
                 )
@@ -370,7 +420,19 @@ fun MainAppScreen() {
                         )
                     }
                     WayfinderScreen.MAP -> {
-                        RoadHealthMapScreen()
+                        RoadHealthMapScreen(
+                            hazards = hazardsList,
+                            locationState = locationState,
+                            hasLocationPermission = hasLocationPermission,
+                            onRequestLocationPermission = {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        )
                     }
                     WayfinderScreen.HISTORY -> {
                         HistoryScreen()
@@ -382,7 +444,6 @@ fun MainAppScreen() {
                         )
                     }
                     WayfinderScreen.LIVE_MONITORING -> {
-                        // Handled above
                     }
                 }
             }

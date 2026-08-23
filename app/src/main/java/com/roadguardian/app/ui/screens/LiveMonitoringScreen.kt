@@ -37,6 +37,7 @@ import com.roadguardian.app.camera.CameraPreview
 import com.roadguardian.app.camera.FrameMetadata
 import com.roadguardian.app.camera.RoadFrameAnalyzer
 import com.roadguardian.app.domain.model.RoadHazardDetection
+import com.roadguardian.app.sensors.SensorTelemetry
 import com.roadguardian.app.ui.components.GlassButton
 import com.roadguardian.app.ui.components.GlassCard
 import com.roadguardian.app.ui.components.GlassStatusChip
@@ -53,25 +54,25 @@ fun LiveMonitoringScreen(
     detections: List<RoadHazardDetection>,
     frameMetadata: FrameMetadata?,
     totalDetectionsCount: Int,
+    speedValue: String = "0",
+    speedUnit: String = "km/h",
     benchmarkSnapshot: AiBenchmarkSnapshot = AiBenchmarkSnapshot(),
+    sensorTelemetry: SensorTelemetry = SensorTelemetry(),
     onStopMonitoring: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
-        // Real CameraX Preview Feed (UNTOUCHED)
         CameraPreview(
             modifier = Modifier.fillMaxSize(),
             analyzer = analyzer
         )
 
-        // Real Hazard Detection Overlay (bounding boxes + orientation-aware labels) (UNTOUCHED LOGIC)
         HazardDetectionOverlay(
             modifier = Modifier.fillMaxSize(),
             detections = detections,
             frameMetadata = frameMetadata
         )
 
-        // Top Floating Glass Status Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -93,14 +94,12 @@ fun LiveMonitoringScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Monitoring Active Status Chip
                 GlassStatusChip(
                     text = "Monitoring Active",
                     dotColor = WayfinderPrimaryGreen,
                     animateDot = true
                 )
 
-                // Status Icons in muted glass circle
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -121,7 +120,6 @@ fun LiveMonitoringScreen(
             }
         }
 
-        // Developer A/B Benchmark HUD (Floating Glass Overlay)
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -204,12 +202,83 @@ fun LiveMonitoringScreen(
                                 color = WayfinderSage
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val accText = if (sensorTelemetry.accelerometerAvailable) {
+                                "ACC ${String.format("%.2f", sensorTelemetry.filteredAcceleration)} m/s²"
+                            } else {
+                                "ACC N/A"
+                            }
+                            Text(
+                                text = accText,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp
+                                ),
+                                color = WayfinderTextSecondary
+                            )
+
+                            val gyroText = if (sensorTelemetry.gyroscopeAvailable) {
+                                "GYRO ${String.format("%.2f", sensorTelemetry.filteredRotation)} rad/s"
+                            } else {
+                                "GYRO N/A"
+                            }
+                            Text(
+                                text = gyroText,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp
+                                ),
+                                color = WayfinderTextSecondary
+                            )
+                        }
+
+                        if (sensorTelemetry.impactDetected || sensorTelemetry.rotationDetected) {
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (sensorTelemetry.impactDetected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(WayfinderHazardPothole.copy(alpha = 0.25f))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "ROAD IMPACT",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = WayfinderHazardPothole
+                                        )
+                                    }
+                                }
+                                if (sensorTelemetry.rotationDetected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(WayfinderSage.copy(alpha = 0.25f))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "ROTATION",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = WayfinderSage
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Bottom Telemetry & Controls Floating Glass Panel
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -230,7 +299,6 @@ fun LiveMonitoringScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Floating Telemetry Glass Card
                 GlassCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -241,7 +309,6 @@ fun LiveMonitoringScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Current Speed
                         Column {
                             Text(
                                 text = "CURRENT SPEED",
@@ -252,7 +319,7 @@ fun LiveMonitoringScreen(
                             Spacer(modifier = Modifier.height(2.dp))
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
-                                    text = "0",
+                                    text = speedValue,
                                     style = MaterialTheme.typography.displayLarge.copy(
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 40.sp,
@@ -262,7 +329,7 @@ fun LiveMonitoringScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "km/h",
+                                    text = speedUnit,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = WayfinderSage,
                                     modifier = Modifier.padding(bottom = 6.dp)
@@ -270,7 +337,6 @@ fun LiveMonitoringScreen(
                             }
                         }
 
-                        // Total Detections Count
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = "TOTAL DETECTIONS",
@@ -290,7 +356,6 @@ fun LiveMonitoringScreen(
                     }
                 }
 
-                // Stop Monitoring Glass Button (Soft Red Glass)
                 GlassButton(
                     text = "Stop Monitoring",
                     onClick = onStopMonitoring,
