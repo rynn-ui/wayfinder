@@ -2,6 +2,7 @@ package com.roadguardian.app.camera
 
 import androidx.camera.core.ImageInfo
 import androidx.camera.core.ImageProxy
+import com.roadguardian.app.ai.inference.AiModelType
 import com.roadguardian.app.ai.inference.RoadHazardDetector
 import com.roadguardian.app.ai.inference.TfliteRunner
 import com.roadguardian.app.domain.model.HazardType
@@ -63,13 +64,13 @@ class RoadFrameAnalyzerTest {
         var isClosed = false
 
         val runner = TfliteRunner { _, output ->
-            output[0][7][0] = 0.75f
+            output[0][4][0] = 0.75f
             output[0][0][0] = 320.0f
             output[0][1][0] = 320.0f
             output[0][2][0] = 100.0f
             output[0][3][0] = 100.0f
         }
-        val detector = RoadHazardDetector.fromRunner(runner)
+        val detector = RoadHazardDetector.fromRunner(runner, AiModelType.DEFAULT)
 
         val analyzer = RoadFrameAnalyzer(
             detector = detector,
@@ -151,13 +152,13 @@ class RoadFrameAnalyzerTest {
         return Proxy.newProxyInstance(
             ImageProxy::class.java.classLoader,
             arrayOf(ImageProxy::class.java)
-        ) { _, method, _ ->
+        ) { _, method, args ->
             when (method.name) {
                 "getWidth" -> width
                 "getHeight" -> height
                 "getImageInfo" -> imageInfo
                 "getPlanes" -> arrayOf(plane)
-                "getCropRect" -> null
+                "getFormat" -> android.graphics.ImageFormat.YUV_420_888
                 "close" -> {
                     onClose()
                     null

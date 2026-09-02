@@ -316,23 +316,22 @@ fun GlassButton(
     }
 }
 
-/**
- * Small translucent status badge / chip for active indicators.
- */
 @Composable
 fun GlassStatusChip(
     text: String,
     modifier: Modifier = Modifier,
-    dotColor: Color = WayfinderPrimaryGreen,
-    animateDot: Boolean = true
+    dotColor: Color = Color(0xFF10B981),
+    animateDot: Boolean = true,
+    backgroundColor: Color? = null,
+    borderColor: Color? = null
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "chip_dot_pulse")
     val dotAlpha by if (animateDot) {
         infiniteTransition.animateFloat(
-            initialValue = 0.45f,
+            initialValue = 0.30f,
             targetValue = 1.0f,
             animationSpec = infiniteRepeatable(
-                animation = tween(1200, easing = LinearEasing),
+                animation = tween(800, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
             ),
             label = "dot_alpha"
@@ -346,31 +345,39 @@ fun GlassStatusChip(
         modifier = modifier
             .clip(CircleShape)
             .background(
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.06f)
-                    )
-                )
+                backgroundColor ?: Color(0xE60A1D13)
             )
             .border(
                 1.dp,
-                Color.White.copy(alpha = 0.16f),
+                borderColor ?: Color(0x6610B981),
                 CircleShape
             )
             .padding(horizontal = 14.dp, vertical = 7.dp)
     ) {
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(dotColor.copy(alpha = dotAlpha))
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+            modifier = Modifier.size(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (animateDot) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(dotColor.copy(alpha = dotAlpha * 0.35f))
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(dotColor.copy(alpha = if (animateDot) dotAlpha else 1.0f))
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.3.sp
             ),
             color = WayfinderTextPrimary

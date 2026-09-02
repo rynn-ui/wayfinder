@@ -3,11 +3,8 @@ package com.roadguardian.app.ai.inference
 import com.roadguardian.app.domain.model.RoadHazardDetection
 import java.util.ArrayDeque
 
-/**
- * Snapshot of real-time and cumulative AI performance metrics for developer A/B benchmarking.
- */
 data class AiBenchmarkSnapshot(
-    val activeModel: AiModelType = AiModelType.INT8,
+    val activeModel: AiModelType = AiModelType.DEFAULT,
     val isLoading: Boolean = false,
     val isWarmingUp: Boolean = false,
     val warmupRemaining: Int = 0,
@@ -17,7 +14,6 @@ data class AiBenchmarkSnapshot(
     val currentDetectionsCount: Int = 0,
     val currentAvgConfidence: Float = 0f,
     val currentMaxConfidence: Float = 0f,
-    // Cumulative A/B Session Metrics (excluding warmup)
     val framesProcessed: Long = 0L,
     val framesWithDetection: Long = 0L,
     val totalDetections: Long = 0L,
@@ -26,12 +22,8 @@ data class AiBenchmarkSnapshot(
     val sessionAvgLatencyMs: Float = 0f
 )
 
-/**
- * Thread-safe benchmark tracker for measuring actual inference throughput,
- * latencies, detection rates, and confidences per active model.
- */
 class AiBenchmarkTracker(
-    initialModel: AiModelType = AiModelType.INT8,
+    initialModel: AiModelType = AiModelType.DEFAULT,
     private val warmupTargetFrames: Int = 15,
     private val rollingWindowSize: Int = 20
 ) {
@@ -52,7 +44,6 @@ class AiBenchmarkTracker(
     private var currentAvgConfidence: Float = 0f
     private var currentMaxConfidence: Float = 0f
 
-    // Cumulative stats for active model
     private var framesProcessed: Long = 0L
     private var framesWithDetection: Long = 0L
     private var totalDetections: Long = 0L
@@ -96,19 +87,16 @@ class AiBenchmarkTracker(
                 currentMaxConfidence = 0f
             }
 
-            // Warmup filter: avoid skewing rolling/session averages during initial warmup frames
             if (warmupRemaining > 0) {
                 warmupRemaining--
                 return createSnapshotLocked()
             }
 
-            // Update rolling latency window
             if (recentLatencies.size >= rollingWindowSize) {
                 recentLatencies.removeFirst()
             }
             recentLatencies.addLast(latencyMs)
 
-            // Update session cumulative stats
             framesProcessed++
             if (detections.isNotEmpty()) {
                 framesWithDetection++

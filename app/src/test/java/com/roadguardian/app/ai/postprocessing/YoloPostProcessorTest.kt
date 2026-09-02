@@ -38,13 +38,13 @@ class YoloPostProcessorTest {
     @Test
     fun process_decodesHighConfidencePotholeCorrectly() {
         val processor = YoloPostProcessor(confidenceThreshold = 0.20f)
-        val raw = Array(1) { Array(8) { FloatArray(8400) } }
+        val raw = Array(1) { Array(5) { FloatArray(8400) } }
 
         raw[0][0][0] = 320.0f
         raw[0][1][0] = 320.0f
         raw[0][2][0] = 100.0f
         raw[0][3][0] = 60.0f
-        raw[0][7][0] = 0.85f
+        raw[0][4][0] = 0.85f
 
         val detections = processor.process(raw, originalWidth = 1280, originalHeight = 1280)
 
@@ -64,13 +64,13 @@ class YoloPostProcessorTest {
     @Test
     fun process_filtersOutLowConfidencePredictions() {
         val processor = YoloPostProcessor(confidenceThreshold = 0.50f)
-        val raw = Array(1) { Array(8) { FloatArray(8400) } }
+        val raw = Array(1) { Array(5) { FloatArray(8400) } }
 
         raw[0][0][0] = 100.0f
         raw[0][1][0] = 100.0f
         raw[0][2][0] = 50.0f
         raw[0][3][0] = 50.0f
-        raw[0][7][0] = 0.30f
+        raw[0][4][0] = 0.30f
 
         val detections = processor.process(raw, originalWidth = 640, originalHeight = 640)
         assertTrue(detections.isEmpty())
@@ -79,19 +79,19 @@ class YoloPostProcessorTest {
     @Test
     fun applyNms_removesOverlappingSameClassDetections() {
         val processor = YoloPostProcessor(iouThreshold = 0.45f)
-        val raw = Array(1) { Array(8) { FloatArray(8400) } }
+        val raw = Array(1) { Array(5) { FloatArray(8400) } }
 
         raw[0][0][0] = 320.0f
         raw[0][1][0] = 320.0f
         raw[0][2][0] = 100.0f
         raw[0][3][0] = 60.0f
-        raw[0][7][0] = 0.90f
+        raw[0][4][0] = 0.90f
 
         raw[0][0][1] = 322.0f
         raw[0][1][1] = 321.0f
         raw[0][2][1] = 98.0f
         raw[0][3][1] = 59.0f
-        raw[0][7][1] = 0.75f
+        raw[0][4][1] = 0.75f
 
         val detections = processor.process(raw, originalWidth = 640, originalHeight = 640)
         assertEquals(1, detections.size)
@@ -99,8 +99,14 @@ class YoloPostProcessorTest {
     }
 
     @Test
-    fun applyNms_retainsDifferentClassDetectionsInSameRegion() {
-        val processor = YoloPostProcessor(iouThreshold = 0.45f)
+    fun applyNms_filtersOutNonPotholesInMultiClassMode() {
+        val processor = YoloPostProcessor(
+            classCount = 4,
+            potholeClassId = 3,
+            singleClassMode = false,
+            iouThreshold = 0.45f,
+            classLabels = YoloPostProcessor.DEFAULT_CLASS_LABELS
+        )
         val raw = Array(1) { Array(8) { FloatArray(8400) } }
 
         raw[0][0][0] = 320.0f
@@ -109,13 +115,77 @@ class YoloPostProcessorTest {
         raw[0][3][0] = 60.0f
         raw[0][7][0] = 0.90f
 
-        raw[0][0][1] = 320.0f
-        raw[0][1][1] = 320.0f
-        raw[0][2][1] = 100.0f
-        raw[0][3][1] = 60.0f
+        raw[0][0][1] = 100.0f
+        raw[0][1][1] = 100.0f
+        raw[0][2][1] = 50.0f
+        raw[0][3][1] = 50.0f
         raw[0][6][1] = 0.85f
 
         val detections = processor.process(raw, originalWidth = 640, originalHeight = 640)
-        assertEquals(2, detections.size)
+        assertEquals(1, detections.size)
+        assertEquals(HazardType.POTHOLE, detections[0].hazardType)
+    }
+
+    @Test
+    fun computeRawStats_reportsHighestRawCandidateBeforeFiltering() {
+        val processor = YoloPostProcessor(
+            classCount = 4,
+            potholeClassId = 3,
+            singleClassMode = false,
+            classLabels = YoloPostProcessor.DEFAULT_CLASS_LABELS
+        )
+        val raw = Array(1) { Array(8) { FloatArray(8400) } }
+
+        raw[0][0][0] = 320.0f
+        raw[0][1][0] = 300.0f
+        raw[0][2][0] = 100.0f
+        raw[0][3][0] = 60.0f
+        raw[0][7][0] = 0.85f
+
+        raw[0][0][1] = 100.0f
+        raw[0][1][1] = 100.0f
+        raw[0][2][1] = 50.0f
+        raw[0][3][1] = 50.0f
+        raw[0][6][1] = 0.90f
+
+        val stats = processor.computeRawStats(raw)
+        assertNotNull(stats)
+        assertEquals(0.90f, stats!!.rawMaxScore, 0.001f)
+        assertEquals(2, stats.rawMaxClass)
+        assertEquals("alligator_crack", stats.rawMaxClassLabel)
+        assertEquals(0.85f, stats.potholeMaxScore, 0.001f)
+        assertEquals(1, stats.candidatesAtThreshold)
+        assertEquals(100.0f, stats.rawMaxBoxX, 0.001f)
+    }
+
+    @Test
+    fun computeRawStats_zeroTensor_reportsZeroScoresAndZeroCandidates() {
+        val processor = YoloPostProcessor()
+        val raw = Array(1) { Array(5) { FloatArray(8400) } }
+
+        val stats = processor.computeRawStats(raw)
+        assertNotNull(stats)
+        assertEquals(0.0f, stats!!.rawMaxScore, 0.001f)
+        assertEquals(0.0f, stats.potholeMaxScore, 0.001f)
+        assertEquals(0, stats.candidatesAtThreshold)
+        assertEquals(0.0f, stats.tensorMin, 0.001f)
+        assertEquals(0.0f, stats.tensorMax, 0.001f)
+    }
+
+    @Test
+    fun computeRawStats_singleClassMode_usesRowFourAsClassScore() {
+        val processor = YoloPostProcessor(singleClassMode = true, classCount = 1)
+        val raw = Array(1) { Array(5) { FloatArray(8400) } }
+
+        raw[0][0][0] = 320.0f
+        raw[0][1][0] = 320.0f
+        raw[0][2][0] = 200.0f
+        raw[0][3][0] = 200.0f
+        raw[0][4][0] = 0.91f
+
+        val stats = processor.computeRawStats(raw)
+        assertNotNull(stats)
+        assertEquals(0.91f, stats!!.rawMaxScore, 0.001f)
+        assertEquals(1, stats.candidatesAtThreshold)
     }
 }

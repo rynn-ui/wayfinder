@@ -10,7 +10,11 @@ data class RoadHazard(
     val timestamp: Long,
     val source: String = "YOLO",
     val confirmationCount: Int = 1,
-    val lastSeenAt: Long = timestamp
+    val lastSeenAt: Long = timestamp,
+    val gpsAccuracy: Float? = null,
+    val status: PotholeStatus = PotholeStatus.ACTIVE,
+    val firstDetectedAt: Long = timestamp,
+    val imageUrl: String? = null
 ) {
     init {
         require(id.isNotBlank())
@@ -18,7 +22,14 @@ data class RoadHazard(
         require(confirmationCount >= 1)
         require(timestamp >= 0L)
         require(lastSeenAt >= 0L)
+        require(firstDetectedAt >= 0L)
     }
+
+    val potholeId: String
+        get() = id
+
+    val verificationCount: Int
+        get() = confirmationCount
 
     val latitude: Double
         get() = deviceLatitude
@@ -26,12 +37,14 @@ data class RoadHazard(
     val longitude: Double
         get() = deviceLongitude
 
+    val hazardSeverity: HazardSeverity
+        get() = HazardSeverity.fromValue(severity)
+
     val displayTitle: String
         get() = when (hazardType) {
             HazardType.POTHOLE -> "Pothole"
             HazardType.LONGITUDINAL_CRACK -> "Longitudinal Crack"
             HazardType.TRANSVERSE_CRACK -> "Transverse Crack"
-            HazardType.ALLIGATOR_CRACK -> "Alligator Crack"
         }
 
     val isCritical: Boolean
@@ -46,3 +59,4 @@ data class RoadHazard(
         }
     }
 }
+

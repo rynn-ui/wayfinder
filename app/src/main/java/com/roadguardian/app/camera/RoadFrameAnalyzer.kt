@@ -4,6 +4,7 @@ import android.graphics.Rect
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.roadguardian.app.ai.inference.RoadHazardDetector
+import com.roadguardian.app.ai.postprocessing.RawDetectionStats
 import com.roadguardian.app.domain.model.RoadHazardDetection
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -49,7 +50,8 @@ class RoadFrameAnalyzer(
     private val onInferenceResult: (List<RoadHazardDetection>, FrameMetadata) -> Unit = { _, _ -> },
     private val onInferenceResultWithTiming: (List<RoadHazardDetection>, FrameMetadata, Float) -> Unit = { _, _, _ -> },
     private val onError: (Throwable) -> Unit = {},
-    private val onFrameAnalyzed: (FrameMetadata) -> Unit = {}
+    private val onFrameAnalyzed: (FrameMetadata) -> Unit = {},
+    private val onRawDiagnostics: (RawDetectionStats?) -> Unit = {}
 ) : ImageAnalysis.Analyzer {
 
     constructor(
@@ -62,7 +64,8 @@ class RoadFrameAnalyzer(
         onInferenceResult = onInferenceResult,
         onInferenceResultWithTiming = { _, _, _ -> },
         onError = onError,
-        onFrameAnalyzed = onFrameAnalyzed
+        onFrameAnalyzed = onFrameAnalyzed,
+        onRawDiagnostics = {}
     )
 
     private val detectorRef = AtomicReference<RoadHazardDetector?>(detector)
@@ -124,8 +127,10 @@ class RoadFrameAnalyzer(
                     val result = currentDetector.detectWithTiming(imageProxy, metadata.timestamp)
                     onInferenceResult(result.detections, metadata)
                     onInferenceResultWithTiming(result.detections, metadata, result.latencyMs)
+                    onRawDiagnostics(result.rawStats)
                 } catch (t: Throwable) {
                     onError(t)
+                    onRawDiagnostics(null)
                 } finally {
                     isProcessing.set(false)
                 }

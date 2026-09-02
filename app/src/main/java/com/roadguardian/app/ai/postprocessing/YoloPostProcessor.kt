@@ -6,12 +6,34 @@ import com.roadguardian.app.domain.model.RoadHazardDetection
 import java.util.UUID
 
 class YoloPostProcessor(
-    val confidenceThreshold: Float = 0.15f,
+    val confidenceThreshold: Float = 0.35f,
     val iouThreshold: Float = 0.45f,
     val inputSize: Int = 640,
     val totalPredictions: Int = 8400,
-    val classCount: Int = 4
+    val classCount: Int = 1,
+    val potholeClassId: Int = 0,
+    val singleClassMode: Boolean = true,
+    val classLabels: List<String> = listOf("pothole")
 ) {
+
+    companion object {
+        const val MODEL_CLASS_LONGITUDINAL = 0
+        const val MODEL_CLASS_TRANSVERSE = 1
+        const val MODEL_CLASS_ALLIGATOR = 2
+        const val MODEL_CLASS_POTHOLE = 3
+
+        val DEFAULT_CLASS_LABELS = listOf(
+            "longitudinal_crack",
+            "transverse_crack",
+            "alligator_crack",
+            "pothole"
+        )
+    }
+
+    private val effectiveClassCount = if (singleClassMode) 1 else classCount
+
+    fun classLabel(classIndex: Int): String =
+        classLabels.getOrElse(classIndex) { "class_$classIndex" }
 
     fun process(
         rawOutput: Array<Array<FloatArray>>,
@@ -19,7 +41,7 @@ class YoloPostProcessor(
         originalHeight: Int,
         timestamp: Long = System.currentTimeMillis()
     ): List<RoadHazardDetection> {
-        require(rawOutput.isNotEmpty() && rawOutput[0].size >= 4 + classCount)
+        require(rawOutput.isNotEmpty() && rawOutput[0].size >= 4 + (if (singleClassMode) 1 else classCount))
         require(originalWidth > 0 && originalHeight > 0)
 
         val output = rawOutput[0]
@@ -29,19 +51,28 @@ class YoloPostProcessor(
         val candidates = mutableListOf<RoadHazardDetection>()
 
         for (i in 0 until totalPredictions) {
-            var maxScore = 0.0f
-            var maxClassId = -1
+            val score: Float
+            val isPothole: Boolean
 
-            for (c in 0 until classCount) {
-                val score = output[4 + c][i]
-                if (score > maxScore) {
-                    maxScore = score
-                    maxClassId = c
+            if (singleClassMode) {
+                score = output[4][i]
+                isPothole = true
+            } else {
+                val pScore = if (potholeClassId < classCount) output[4 + potholeClassId][i] else 0f
+                var maxOtherScore = 0f
+                for (c in 0 until classCount) {
+                    if (c != potholeClassId) {
+                        val other = output[4 + c][i]
+                        if (other > maxOtherScore) {
+                            maxOtherScore = other
+                        }
+                    }
                 }
+                score = pScore
+                isPothole = pScore >= maxOtherScore && pScore >= confidenceThreshold
             }
 
-            if (maxScore >= confidenceThreshold && maxClassId >= 0) {
-                val hazardType = HazardType.fromClassId(maxClassId) ?: continue
+            if (isPothole && score >= confidenceThreshold) {
                 val cx = output[0][i]
                 val cy = output[1][i]
                 val w = output[2][i]
@@ -62,8 +93,8 @@ class YoloPostProcessor(
                     candidates.add(
                         RoadHazardDetection(
                             id = UUID.randomUUID().toString(),
-                            hazardType = hazardType,
-                            confidence = maxScore,
+                            hazardType = HazardType.POTHOLE,
+                            confidence = score,
                             timestamp = timestamp,
                             boundingBox = bbox
                         )
@@ -103,19 +134,104 @@ class YoloPostProcessor(
             val iterator = sorted.iterator()
             while (iterator.hasNext()) {
                 val current = iterator.next()
-                if (current.hazardType == best.hazardType) {
-                    val box1 = best.boundingBox
-                    val box2 = current.boundingBox
-                    if (box1 != null && box2 != null) {
-                        val iou = calculateIoU(box1, box2)
-                        if (iou >= threshold) {
-                            iterator.remove()
-                        }
+                val box1 = best.boundingBox
+                val box2 = current.boundingBox
+                if (box1 != null && box2 != null) {
+                    val iou = calculateIoU(box1, box2)
+                    if (iou >= threshold) {
+                        iterator.remove()
                     }
                 }
             }
         }
 
         return kept
+    }
+
+    fun computeRawStats(rawOutput: Array<Array<FloatArray>>): RawDetectionStats? {
+        if (rawOutput.isEmpty()) return null
+        val output = rawOutput[0]
+        val rows = output.size
+        if (rows < 4 + effectiveClassCount) return null
+        val predictions = minOf(totalPredictions, output[0].size)
+        if (predictions == 0) return null
+
+        val hints = DetectionLayoutHint(rows, effectiveClassCount)
+
+        var tensorMin = Float.MAX_VALUE
+        var tensorMax = -Float.MAX_VALUE
+        var sum = 0.0
+        var count = 0L
+        for (row in output) {
+            for (v in row) {
+                if (v < tensorMin) tensorMin = v
+                if (v > tensorMax) tensorMax = v
+                sum += v
+                count++
+            }
+        }
+        val tensorMean = if (count == 0L) 0f else (sum / count).toFloat()
+
+        var rawMaxScore = -Float.MAX_VALUE
+        var rawMaxClass = 0
+        var rawMaxIndex = 0
+        var bestAnchorScores = FloatArray(effectiveClassCount)
+        var potholeMaxScore = -Float.MAX_VALUE
+        var candidatesAtThreshold = 0
+
+        for (i in 0 until predictions) {
+            var bestClassScore = -Float.MAX_VALUE
+            var bestClass = 0
+            val anchorScores = FloatArray(effectiveClassCount)
+            for (c in 0 until effectiveClassCount) {
+                val s = output[hints.classRow(c)][i]
+                anchorScores[c] = s
+                if (s > bestClassScore) {
+                    bestClassScore = s
+                    bestClass = c
+                }
+            }
+
+            if (bestClassScore > rawMaxScore) {
+                rawMaxScore = bestClassScore
+                rawMaxClass = bestClass
+                rawMaxIndex = i
+                bestAnchorScores = anchorScores.copyOf()
+            }
+
+            val potholeScore = output[hints.classRow(if (singleClassMode) 0 else potholeClassId)][i]
+            if (potholeScore > potholeMaxScore) potholeMaxScore = potholeScore
+
+            if (potholeScore >= confidenceThreshold && potholeScore >= bestClassScore) {
+                candidatesAtThreshold++
+            }
+        }
+
+        return RawDetectionStats(
+            tensorMin = tensorMin,
+            tensorMax = tensorMax,
+            tensorMean = tensorMean,
+            rawMaxScore = rawMaxScore,
+            rawMaxClass = rawMaxClass,
+            rawMaxClassLabel = classLabel(rawMaxClass),
+            rawMaxBoxX = output[0][rawMaxIndex],
+            rawMaxBoxY = output[1][rawMaxIndex],
+            rawMaxBoxW = output[2][rawMaxIndex],
+            rawMaxBoxH = output[3][rawMaxIndex],
+            rawMaxTopAnchorClassScores = bestAnchorScores,
+            potholeMaxScore = potholeMaxScore,
+            candidatesAtThreshold = candidatesAtThreshold
+        )
+    }
+
+    private data class DetectionLayoutHint(
+        val totalRows: Int,
+        val effectiveClassCount: Int
+    ) {
+        fun classRow(classIndex: Int): Int {
+            val base = if (effectiveClassCount == 1) 0 else classIndex
+            val candidate = 4 + base
+            return if (candidate < totalRows) candidate else 4
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.roadguardian.app.data.repository
 
+import com.roadguardian.app.domain.model.HazardSeverity
 import com.roadguardian.app.domain.model.HazardType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -11,10 +12,16 @@ import org.junit.Test
 class RoadHazardRepositoryTest {
 
     private lateinit var repository: RoadHazardRepository
+    private lateinit var firestoreRepo: FirestoreRoadHazardRepository
 
     @Before
     fun setUp() {
-        repository = RoadHazardRepository(deduplicationRadiusMeters = 15.0)
+        repository = InMemoryRoadHazardRepository(deduplicationRadiusMeters = 15.0)
+        firestoreRepo = FirestoreRoadHazardRepository(
+            firestore = null,
+            authManager = null,
+            deduplicationRadiusMeters = 15.0
+        )
     }
 
     @Test
@@ -37,21 +44,23 @@ class RoadHazardRepositoryTest {
     }
 
     @Test
-    fun recordDetection_deduplicatesWhenWithinRadius() {
-        val first = repository.recordDetection(
-            hazardType = HazardType.POTHOLE,
-            confidence = 0.70f,
+    fun recordPothole_updatesAndSmoothsCoordinatesWhenWithinRadius() {
+        val first = repository.recordPothole(
             latitude = 26.44990,
             longitude = 80.33190,
+            confidence = 0.70f,
+            severity = HazardSeverity.MEDIUM,
+            gpsAccuracy = 3.5f,
             timestamp = 1000L
         )
         assertNotNull(first)
 
-        val second = repository.recordDetection(
-            hazardType = HazardType.POTHOLE,
-            confidence = 0.85f,
+        val second = repository.recordPothole(
             latitude = 26.44993,
             longitude = 80.33192,
+            confidence = 0.85f,
+            severity = HazardSeverity.HIGH,
+            gpsAccuracy = 2.0f,
             timestamp = 2000L
         )
 
@@ -61,6 +70,7 @@ class RoadHazardRepositoryTest {
         assertEquals(2, second.confirmationCount)
         assertEquals(2000L, second.lastSeenAt)
         assertEquals(0.85f, second.confidence, 0.0001f)
+        assertEquals("high", second.severity)
     }
 
     @Test
@@ -151,9 +161,10 @@ class RoadHazardRepositoryTest {
     }
 
     @Test
-    fun getHazardsInBounds_filtersCorrectly() {
+    fun getHazardsInBounds_filtersBothLatitudeAndLongitude() {
         repository.recordDetection(HazardType.POTHOLE, 0.8f, 26.4499, 80.3319, 1000L)
         repository.recordDetection(HazardType.POTHOLE, 0.8f, 26.8467, 80.9462, 2000L)
+        repository.recordDetection(HazardType.POTHOLE, 0.8f, 26.4499, 82.0000, 3000L)
 
         val kanpurBounds = repository.getHazardsInBounds(
             minLatitude = 26.40,
@@ -163,5 +174,70 @@ class RoadHazardRepositoryTest {
         )
         assertEquals(1, kanpurBounds.size)
         assertEquals(26.4499, kanpurBounds[0].deviceLatitude, 0.001)
+        assertEquals(80.3319, kanpurBounds[0].deviceLongitude, 0.001)
+    }
+
+    @Test
+    fun firestoreRoadHazardRepository_operatesSafelyWithoutLiveFirebase() {
+        val hazard = firestoreRepo.recordPothole(
+            latitude = 26.4499,
+            longitude = 80.3319,
+            confidence = 0.88f,
+            severity = HazardSeverity.CRITICAL
+        )
+        assertNotNull(hazard)
+        assertEquals(1, firestoreRepo.allHazards.size)
+        assertEquals(HazardType.POTHOLE, firestoreRepo.allHazards[0].hazardType)
+        assertEquals("critical", firestoreRepo.allHazards[0].severity)
+
+        val repeat = firestoreRepo.recordPothole(
+            latitude = 26.44992,
+            longitude = 80.33191,
+            confidence = 0.92f,
+            severity = HazardSeverity.CRITICAL
+        )
+        assertNotNull(repeat)
+        assertEquals(1, firestoreRepo.allHazards.size)
+        assertEquals(2, repeat!!.confirmationCount)
+        assertEquals(0.92f, repeat.confidence, 0.001f)
+    }
+
+    @Test
+    fun firestoreRoadHazardRepository_handlesRegionSyncLifecycleSafely() {
+        org.junit.Assert.assertFalse(firestoreRepo.isRegionSyncActive)
+        assertNull(firestoreRepo.currentSyncCenter)
+
+        firestoreRepo.startRegionSync(26.4499, 80.3319)
+
+        firestoreRepo.stopRegionSync()
+        org.junit.Assert.assertFalse(firestoreRepo.isRegionSyncActive)
+        assertNull(firestoreRepo.currentSyncCenter)
+    }
+
+    @Test
+    fun firestoreRoadHazardRepository_configurableThreshold() {
+        val customRepo = FirestoreRoadHazardRepository(
+            firestore = null,
+            authManager = null,
+            deduplicationRadiusMeters = 15.0,
+            regionSyncThresholdMeters = 1200.0
+        )
+        assertEquals(1200.0, customRepo.regionSyncThresholdMeters, 0.001)
+        assertEquals(FirestoreRoadHazardRepository.DEFAULT_REGION_SYNC_THRESHOLD_METERS, firestoreRepo.regionSyncThresholdMeters, 0.001)
+    }
+
+    @Test
+    fun inMemoryRepository_addHazardsAndClear_managesStateFlowProperly() {
+        val h1 = repository.recordDetection(HazardType.POTHOLE, 0.8f, 26.4499, 80.3319)!!
+        assertEquals(1, repository.hazardsState.value.size)
+
+        repository.clear()
+        assertEquals(0, repository.hazardsState.value.size)
+        assertEquals(0, repository.allHazards.size)
+
+        repository.addHazards(listOf(h1))
+        assertEquals(1, repository.hazardsState.value.size)
+        assertEquals(h1.id, repository.hazardsState.value[0].id)
     }
 }
+

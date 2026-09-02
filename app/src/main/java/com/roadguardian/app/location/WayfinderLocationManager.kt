@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.location.LocationManagerCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -47,6 +48,10 @@ class WayfinderLocationManager(
     private var locationCallback: LocationCallback? = null
     private var fallbackListener: LocationListener? = null
 
+    init {
+        refreshLocation()
+    }
+
     fun hasPermission(): Boolean {
         val fine = ContextCompat.checkSelfPermission(
             context,
@@ -59,9 +64,64 @@ class WayfinderLocationManager(
         return fine || coarse
     }
 
+    fun isLocationEnabled(): Boolean {
+        val lm = systemLocationManager ?: return false
+        return LocationManagerCompat.isLocationEnabled(lm) ||
+                lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    @SuppressLint("MissingPermission")
+    fun refreshLocation() {
+        if (!hasPermission()) return
+        try {
+            fusedClient.lastLocation.addOnSuccessListener { lastLoc ->
+                if (lastLoc != null) {
+                    updateFromLocation(lastLoc)
+                } else {
+                    val sysLoc = systemLocationManager?.let { lm ->
+                        if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                        else if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                        else lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                    }
+                    if (sysLoc != null) {
+                        updateFromLocation(sysLoc)
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getLastKnownCoordinates(): Pair<Double, Double>? {
+        val state = _locationState.value
+        if (state.isAvailable && state.latitude != 0.0) {
+            return Pair(state.latitude, state.longitude)
+        }
+        if (!hasPermission()) return null
+        return try {
+            val sysLoc = systemLocationManager?.let { lm ->
+                lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                    ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+            }
+            if (sysLoc != null && sysLoc.latitude != 0.0) {
+                updateFromLocation(sysLoc)
+                Pair(sysLoc.latitude, sysLoc.longitude)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     @Synchronized
     fun startHighFrequencyUpdates() {
-        if (isUpdating && currentModeHighFrequency) return
+        if (isUpdating && currentModeHighFrequency) {
+            refreshLocation()
+            return
+        }
         stopUpdates()
         currentModeHighFrequency = true
         startFusedUpdates(
@@ -73,7 +133,10 @@ class WayfinderLocationManager(
 
     @Synchronized
     fun startLowFrequencyUpdates() {
-        if (isUpdating && !currentModeHighFrequency) return
+        if (isUpdating && !currentModeHighFrequency) {
+            refreshLocation()
+            return
+        }
         stopUpdates()
         currentModeHighFrequency = false
         startFusedUpdates(
@@ -89,7 +152,7 @@ class WayfinderLocationManager(
         minIntervalMs: Long,
         priority: Int
     ) {
-        if (!hasPermission()) {
+        if (!hasPermission() || !isLocationEnabled()) {
             _locationState.value = _locationState.value.copy(isAvailable = false)
             return
         }
@@ -135,15 +198,10 @@ class WayfinderLocationManager(
 
     @SuppressLint("MissingPermission")
     private fun startSystemLocationFallback(intervalMs: Long, priority: Int) {
-        if (!hasPermission() || systemLocationManager == null) return
+        if (!hasPermission() || !isLocationEnabled() || systemLocationManager == null) return
         try {
-            val listener = object : LocationListener {
-                override fun onLocationChanged(location: Location) {
-                    updateFromLocation(location)
-                }
-                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-                override fun onProviderEnabled(provider: String) {}
-                override fun onProviderDisabled(provider: String) {}
+            val listener = LocationListener { location ->
+                updateFromLocation(location)
             }
             fallbackListener = listener
 

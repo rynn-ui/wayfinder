@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,10 +45,6 @@ import com.roadguardian.app.ui.theme.WayfinderSage
 import com.roadguardian.app.ui.theme.WayfinderTextPrimary
 import com.roadguardian.app.ui.theme.WayfinderTextSecondary
 
-/**
- * Elegant nature-serif brand heading for Wayfinder with soft pale green-to-white
- * gradient and graceful organic under-swoosh flourish.
- */
 @Composable
 fun WayfinderBrandHeading(
     modifier: Modifier = Modifier,
@@ -77,7 +72,6 @@ fun WayfinderBrandHeading(
             )
         )
 
-        // Delicate green flourish swoosh under the word
         Canvas(
             modifier = Modifier
                 .width(118.dp)
@@ -201,7 +195,6 @@ fun WayfinderTopAppBar(
             }
         }
 
-        // Delicate glass border bottom
         HorizontalDivider(
             color = Color.White.copy(alpha = 0.08f),
             thickness = 1.dp

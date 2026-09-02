@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PlayArrow
@@ -39,9 +41,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.roadguardian.app.traffic.model.WazeTrafficState
 import com.roadguardian.app.ui.components.AmbientNatureLayer
 import com.roadguardian.app.ui.components.GlassButton
 import com.roadguardian.app.ui.components.NatureBackground
+import com.roadguardian.app.ui.components.NearbyTrafficCard
 import com.roadguardian.app.ui.components.WeatherPill
 import com.roadguardian.app.ui.theme.WayfinderDarkSurface
 import com.roadguardian.app.ui.theme.WayfinderGlassBorder
@@ -57,9 +61,11 @@ fun HomeScreen(
     isReady: Boolean = true,
     statusMessage: String = "Device calibrated and GPS signal strong.",
     weatherState: WeatherState = WeatherState.Loading,
+    trafficState: WazeTrafficState = WazeTrafficState.Loading,
     cityName: String = "Locating...",
     regionName: String = "",
     onStartMonitoring: () -> Unit,
+    onViewTrafficOnMap: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "home_calm_animations")
@@ -74,27 +80,33 @@ fun HomeScreen(
         label = "radar_spin_slow"
     )
 
+    val scrollState = rememberScrollState()
+
     NatureBackground(modifier = modifier) {
-        // Subtle ambient nature layer: leaf silhouettes, sparse drizzle, soft green illumination
         AmbientNatureLayer(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+                .verticalScroll(scrollState)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // 1. Weather Pill positioned just above the location and GPS/radar icon
-            WeatherPill(
-                weatherState = weatherState,
-                modifier = Modifier.padding(bottom = 14.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                WeatherPill(
+                    weatherState = weatherState
+                )
+            }
 
-            // 2. Current Location Text directly ABOVE the central GPS/radar icon
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 14.dp)
             ) {
                 Text(
                     text = cityName,
@@ -120,10 +132,9 @@ fun HomeScreen(
                 }
             }
 
-            // 3. Central Radar / Calibration Indicator (GPS / Radar)
             Box(
                 modifier = Modifier
-                    .size(105.dp)
+                    .size(96.dp)
                     .shadow(
                         elevation = 12.dp,
                         shape = CircleShape,
@@ -152,10 +163,9 @@ fun HomeScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Spinning gentle ring
                 Box(
                     modifier = Modifier
-                        .size(105.dp)
+                        .size(96.dp)
                         .rotate(spinRotation)
                         .border(
                             width = 2.dp,
@@ -174,44 +184,51 @@ fun HomeScreen(
                     imageVector = Icons.Filled.MyLocation,
                     contentDescription = "Radar",
                     tint = WayfinderPrimaryGreen,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(40.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = if (isReady) "Ready to Monitor" else "Initializing Sensors",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 22.sp,
+                    fontSize = 21.sp,
                     letterSpacing = (-0.2).sp
                 ),
                 color = WayfinderTextPrimary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = statusMessage,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    lineHeight = 18.sp,
-                    fontSize = 13.sp
+                    lineHeight = 17.sp,
+                    fontSize = 12.5.sp
                 ),
                 color = WayfinderTextSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.width(280.dp)
             )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. Start Monitoring Action Button
             GlassButton(
                 text = "Start Monitoring",
                 onClick = onStartMonitoring,
                 icon = Icons.Filled.PlayArrow,
                 isPrimary = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            NearbyTrafficCard(
+                trafficState = trafficState,
+                onViewOnMap = onViewTrafficOnMap,
                 modifier = Modifier.fillMaxWidth()
             )
         }

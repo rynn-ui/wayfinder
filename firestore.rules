@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper validation functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidCoordinate(lat, lon) {
+      return lat is number && lat >= -90.0 && lat <= 90.0
+          && lon is number && lon >= -180.0 && lon <= 180.0;
+    }
+
+    function isValidHazardType(type) {
+      return type is string && type in [
+        'POTHOLE',
+        'LONGITUDINAL_CRACK',
+        'TRANSVERSE_CRACK',
+        'ALLIGATOR_CRACK'
+      ];
+    }
+
+    function isValidSeverity(sev) {
+      return sev is string && sev in ['critical', 'high', 'medium', 'low'];
+    }
+
+    function isValidConfidence(conf) {
+      return conf is number && conf >= 0.0 && conf <= 1.0;
+    }
+
+    function isValidHazardData(data) {
+      return isValidCoordinate(data.deviceLatitude, data.deviceLongitude)
+          && isValidHazardType(data.hazardType)
+          && isValidConfidence(data.confidence)
+          && isValidSeverity(data.severity)
+          && data.timestamp is number && data.timestamp >= 0
+          && data.source is string && data.source == 'YOLO'
+          && data.confirmationCount is number && data.confirmationCount >= 0
+          && data.lastSeenAt is number && data.lastSeenAt >= 0;
+    }
+
+    // Road hazards collection: scoped authenticated read/create/update with strict validation
+    match /road_hazards/{hazardId} {
+      // 1. READ: Authenticated Wayfinder users can read road hazards
+      allow read: if isAuthenticated();
+
+      // 2. CREATE: Authenticated users can create road hazards adhering to valid schema
+      allow create: if isAuthenticated()
+                    && isValidHazardData(request.resource.data);
+
+      // 3. UPDATE: Authenticated users can update existing hazards if schema remains valid
+      // and confirmationCount, timestamp, and lastSeenAt are monotonic non-decreasing
+      allow update: if isAuthenticated()
+                    && isValidHazardData(request.resource.data)
+                    && request.resource.data.confirmationCount >= resource.data.confirmationCount
+                    && request.resource.data.timestamp >= resource.data.timestamp
+                    && request.resource.data.lastSeenAt >= resource.data.lastSeenAt;
+
+      // 4. DELETE: Disallow deletion to preserve road safety telemetry
+      allow delete: if false;
+    }
+  }
+}

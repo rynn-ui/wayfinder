@@ -5,16 +5,21 @@ enum class HazardType(
     val code: String,
     val label: String
 ) {
-    LONGITUDINAL_CRACK(0, "D00", "longitudinal_crack"),
-    TRANSVERSE_CRACK(1, "D10", "transverse_crack"),
-    ALLIGATOR_CRACK(2, "D20", "alligator_crack"),
-    POTHOLE(3, "D40", "pothole");
+    POTHOLE(0, "D40", "pothole"),
+    LONGITUDINAL_CRACK(1, "D00", "longitudinal_crack"),
+    TRANSVERSE_CRACK(2, "D10", "transverse_crack");
 
     companion object {
-        fun fromClassId(classId: Int): HazardType? = entries.firstOrNull { it.classId == classId }
+        fun fromClassId(classId: Int): HazardType? = when (classId) {
+            0, 3 -> POTHOLE
+            1 -> LONGITUDINAL_CRACK
+            2 -> TRANSVERSE_CRACK
+            else -> null
+        }
 
         fun fromCode(code: String): HazardType? = entries.firstOrNull { it.code.equals(code, ignoreCase = true) }
 
         fun fromLabel(label: String): HazardType? = entries.firstOrNull { it.label.equals(label, ignoreCase = true) }
     }
 }
+

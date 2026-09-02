@@ -34,7 +34,19 @@ google-services.json
 
 # Temporary / generated files
 *.log
+*.env*
+.env
+*.hprof
+.kotlin/
 
 documentation/
 MEMORY.md
 .agents/
+
+# Python / ML training scripts, guides, datasets and weights
+ml/
+**/.venv/
+**/__pycache__/
+*.pt
+*.pth
+*.onnx

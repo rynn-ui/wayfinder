@@ -1,28 +1,21 @@
 package com.roadguardian.app.ai.inference
 
-/**
- * Supported TFLite model variants for A/B testing and performance benchmarking.
- */
 enum class AiModelType(
     val displayName: String,
     val assetPath: String,
     val description: String,
-    val precisionLabel: String
+    val precisionLabel: String,
+    val isSingleClass: Boolean
 ) {
-    INT8(
-        displayName = "INT8",
-        assetPath = "yolo12n_seed0_best_dynamic_range_quant.tflite",
-        description = "Dynamic INT8 quantized",
-        precisionLabel = "INT8 (2.83 MB)"
-    ),
-    FP16(
-        displayName = "FP16",
-        assetPath = "yolo12n_seed0_best_float16.tflite",
-        description = "Float16 precision",
-        precisionLabel = "FP16 (5.08 MB)"
+    YOLO11(
+        displayName = "1-Class YOLO11 (Top Accuracy)",
+        assetPath = "pothole_yolo11n_dynamic_int8.tflite",
+        description = "High-accuracy YOLO11 pothole detector",
+        precisionLabel = "INT8 (2.76 MB)",
+        isSingleClass = true
     );
 
     companion object {
-        val DEFAULT = INT8
+        val DEFAULT = YOLO11
     }
 }

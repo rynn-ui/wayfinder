@@ -15,10 +15,13 @@ class RoadHazardTest {
             deviceLongitude = 80.3319,
             hazardType = HazardType.POTHOLE,
             confidence = 0.85f,
-            timestamp = 1000L
+            timestamp = 1000L,
+            gpsAccuracy = 4.5f,
+            status = PotholeStatus.ACTIVE
         )
 
         assertEquals("hazard-123", hazard.id)
+        assertEquals("hazard-123", hazard.potholeId)
         assertEquals(26.4499, hazard.deviceLatitude, 0.0001)
         assertEquals(80.3319, hazard.deviceLongitude, 0.0001)
         assertEquals(26.4499, hazard.latitude, 0.0001)
@@ -26,9 +29,13 @@ class RoadHazardTest {
         assertEquals(HazardType.POTHOLE, hazard.hazardType)
         assertEquals(0.85f, hazard.confidence, 0.0001f)
         assertEquals("critical", hazard.severity)
+        assertEquals(HazardSeverity.CRITICAL, hazard.hazardSeverity)
         assertEquals("Pothole", hazard.displayTitle)
         assertTrue(hazard.isCritical)
         assertEquals(1, hazard.confirmationCount)
+        assertEquals(1, hazard.verificationCount)
+        assertEquals(4.5f, hazard.gpsAccuracy!!, 0.01f)
+        assertEquals(PotholeStatus.ACTIVE, hazard.status)
     }
 
     @Test
@@ -53,9 +60,6 @@ class RoadHazardTest {
 
         val transCrack = RoadHazard("3", 26.0, 80.0, HazardType.TRANSVERSE_CRACK, 0.5f, timestamp = 0L)
         assertEquals("Transverse Crack", transCrack.displayTitle)
-
-        val alligatorCrack = RoadHazard("4", 26.0, 80.0, HazardType.ALLIGATOR_CRACK, 0.5f, timestamp = 0L)
-        assertEquals("Alligator Crack", alligatorCrack.displayTitle)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -73,3 +77,4 @@ class RoadHazardTest {
         RoadHazard("1", 26.0, 80.0, HazardType.POTHOLE, 0.5f, confirmationCount = 0, timestamp = 0L)
     }
 }
+

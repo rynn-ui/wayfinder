@@ -10,9 +10,9 @@ class RoadHazardDetectionTest {
 
     @Test
     fun hazardType_resolvesFromClassIdCorrectly() {
-        assertEquals(HazardType.LONGITUDINAL_CRACK, HazardType.fromClassId(0))
-        assertEquals(HazardType.TRANSVERSE_CRACK, HazardType.fromClassId(1))
-        assertEquals(HazardType.ALLIGATOR_CRACK, HazardType.fromClassId(2))
+        assertEquals(HazardType.POTHOLE, HazardType.fromClassId(0))
+        assertEquals(HazardType.LONGITUDINAL_CRACK, HazardType.fromClassId(1))
+        assertEquals(HazardType.TRANSVERSE_CRACK, HazardType.fromClassId(2))
         assertEquals(HazardType.POTHOLE, HazardType.fromClassId(3))
         assertNull(HazardType.fromClassId(4))
     }
@@ -101,3 +101,4 @@ class RoadHazardDetectionTest {
         assertEquals(0.6f, detection.gyroscopeData?.pitchRate ?: 0f, 0.0001f)
     }
 }
+
